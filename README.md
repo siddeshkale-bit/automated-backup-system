@@ -1,40 +1,76 @@
-# Automated Backup and Google Drive Upload System
+# Automated Backup Script with Google Drive Integration
 
 ## Overview
-This project provides a fully automated backup solution using Python and rclone.  
-It creates timestamped ZIP backups of a local project folder, stores them in a structured directory, uploads them to Google Drive, sends a webhook notification, and runs daily through Windows Task Scheduler.
+This project automates the process of backing up a local project directory, storing backups in a structured timestamped format, uploading them to Google Drive using rclone, sending webhook notifications, and applying a retention policy to clean old backups.  
+The backup runs manually or automatically using Windows Task Scheduler.
 
 ---
 
-## Features
-- Automatic ZIP backup creation  
-- Timestamped backup naming  
-- Organized local backup directory (Year/Month/Day)  
-- Google Drive upload via rclone  
-- Webhook notification after successful backup  
-- Retention policy (daily/weekly/monthly cleanup)  
-- Fully automated daily execution using Task Scheduler  
+## How to Run the Script
+Navigate to your project folder:
+
+cd C:\Users\Siddesh\Desktop\BackupProject
+
+Run the script:
+
+python backup.py
+
 
 ---
 
-## Project Structure
-BackupProject/
-│
-├── backup.py
-├── config.env
-├── logs/
-└── local_backups/
+## Arguments (Optional)
+You can disable webhook notification using:
+
+python backup.py --no-notify
+
+
+(If implemented; else script uses config.env settings.)
 
 ---
 
-## Local Backup Format
-Backups are stored as:
-local_backups/YYYY/MM/DD/MyProject_YYYYMMDD_HHMMSS.zip
+## Installation and Configuration of rclone
+### 1. Install rclone
+Download the Windows installer from:
+https://rclone.org/downloads/
+
+Extract the folder and place `rclone.exe` inside:
+C:\Windows\
+
+
+Verify installation:
+
+rclone version
+
+makefile
+Copy code
+
+### 2. Configure Google Drive Remote
+Run:
+
+rclone config
+
+markdown
+Copy code
+
+Then:
+- Select **n** (new remote)
+- Name it: `gdrive`
+- Choose storage type: **Google Drive**
+- Choose **auto config**
+- Login to Google account
+- Save configuration
+
+Your remote will appear as:
+[gdrive]
+type = drive
+scope = drive
+token = {...}
+
 
 ---
 
-## Configuration (config.env)
-Example configuration:
+## Configuration File (config.env)
+Create a file named `config.env`:
 
 PROJECT_PATH=C:\Users\Siddesh\Desktop\MyProject
 PROJECT_NAME=Myproject
@@ -47,78 +83,70 @@ MONTHLY_RETENTION=3
 WEBHOOK_URL=https://webhook.site/YOUR-UNIQUE-URL
 ENABLE_NOTIFY=true
 
----
-
-## How It Works
-1. Reads settings from **config.env**
-2. Creates timestamped ZIP of the project folder
-3. Saves the ZIP in the correct date folder
-4. Uploads the ZIP to Google Drive using:
-rclone copy ZIP_FILE gdrive:MyProjectBackups
-
-5. Sends webhook notification (optional)
-6. Applies retention cleanup for daily, weekly, monthly backups
 
 ---
 
-## Running the Script Manually
-Navigate to the project folder:
-cd C:\Users\Siddesh\Desktop\BackupProject
+## Retention Settings
+Retention values in `config.env` define how many backups are kept:
 
-makefile
-Copy code
+DAILY_RETENTION=7
+WEEKLY_RETENTION=4
+MONTHLY_RETENTION=3
 
-Run:
-python backup.py
 
----
-
-## Automating with Windows Task Scheduler
-1. Open **Task Scheduler**
-2. Create **New Basic Task**
-3. Trigger: **Daily**
-4. Action: **Start a Program**
-5. Program/script:
-C:\Users\Siddesh\AppData\Local\Programs\Python\Python312\python.exe
-
-markdown
-Copy code
-6. Add arguments:
-backup.py
-
-markdown
-Copy code
-7. Start in:
-C:\Users\Siddesh\Desktop\BackupProject
-
-This ensures the backup runs every day automatically.
+Older backups beyond these limits are automatically deleted during script execution.
 
 ---
 
-## Required Tools
-- Python 3.12+
-- rclone (configured with Google Drive)
-- Webhook URL (optional)
+## Example Output
+When the script completes successfully, example output:
 
----
-
-## Screenshots (For Documentation)
-Recommended screenshots:
-- Local backup folder
-- Google Drive folder showing uploaded ZIPs
-- Task Scheduler configuration (General, Trigger, Action)
-- Webhook request received
-- Successful PowerShell execution of backup.py
-
----
-
-## Output Example
-Backup created: C:...\MyProject_20251211_162400.zip
+Backup created: C:...\MyProject_20251211_100025.zip
 Uploaded to Google Drive.
-Notification sent.
+Webhook notification sent.
 Backup completed successfully.
 
+bash
+Copy code
+
+Google Drive will contain uploaded ZIP files, and the webhook will log:
+
+{"project": "Myproject", "status": "BackupSuccessful"}
+
 ---
 
-## License
-This project is for educational and demonstration purposes.
+## Sample cURL Webhook Payload
+This is sent when backup is successful:
+
+curl -X POST -H "Content-Type: application/json"
+-d '{"project":"Myproject","date":"20251211_100025","status":"BackupSuccessful"}'
+https://webhook.site/YOUR-UNIQUE-URL
+
+
+---
+
+## Windows Task Scheduler (Automation)
+To automate the script daily:
+
+Program/script:
+C:\Users\Siddesh\AppData\Local\Programs\Python\Python312\python.exe
+
+sql
+Copy code
+
+Add arguments:
+backup.py
+
+powershell
+Copy code
+
+Start in:
+C:\Users\Siddesh\Desktop\BackupProject
+
+This runs the backup every day at the scheduled time.
+---
+## Security Considerations
+- Keep `config.env` private — it contains sensitive paths and webhook URL.  
+- Do **not** commit your webhook URL publicly.  
+- Avoid giving write access to entire Google Drive; use a dedicated backup folder.  
+- Ensure deletion permissions in rclone remote are properly restricted.  
